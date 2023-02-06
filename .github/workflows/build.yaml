@@ -1,0 +1,44 @@
+name: Build sailfishos Images
+
+on: 
+  push:
+    branches:
+      - master
+  release:
+    types: [published]
+
+jobs:
+
+  sfos_build_a5:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      
+    - name: install needed pkgs
+      run: |
+        sudo apt-get update && sudo apt-get install -y qemu-user-static
+        
+    - name: Run Docker container to Build Sailfish os
+      uses: addnab/docker-run-action@v3
+      with: 
+        image: coderus/sailfishos-platform-sdk-base:4.5.0.16
+        options: --privileged
+        run: |
+          set -x
+          cd ~/
+          git clone https://github.com/Exynos7880-Linux/a5y17lte-ci.git
+          cd a5y17lte-ci && pwd
+          ./run-mic.sh
+          echo "NOW=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
+    - uses: marvinpinto/action-automatic-releases@latest
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "${{ env.NOW }}"
+        prerelease: false
+        title: "${{ env.NOW }}"
+        files: |
+          /root/a5y17lte-ci/sfe-*/*.zip
+          
+
