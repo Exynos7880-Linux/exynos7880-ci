@@ -37,6 +37,6 @@ jobs:
         prerelease: false
         title: "${{ env.NOW }}"
         files: |
-          /root/a5y17lte-ci/sfe-*/*.zip
+          /a5y17lte/sfe-*/*.zip
           
 
