@@ -33,6 +33,7 @@ jobs:
           cd a5y17lte-ci && pwd
           ./run-mic.sh
           sudo mv /root/a5y17lte-ci/sfe-*/*.zip .
+          sudo chown "$USER" *.zip
     - uses: marvinpinto/action-automatic-releases@latest
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
