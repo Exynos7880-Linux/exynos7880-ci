@@ -19,7 +19,8 @@ jobs:
     - name: install needed pkgs
       run: |
         sudo apt-get update && sudo apt-get install -y qemu-user-static
-        
+        echo "NOW=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
+
     - name: Run Docker container to Build Sailfish os
       uses: addnab/docker-run-action@v3
       with: 
@@ -31,7 +32,6 @@ jobs:
           git clone https://github.com/Exynos7880-Linux/a5y17lte-ci.git
           cd a5y17lte-ci && pwd
           ./run-mic.sh
-          echo "NOW=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
     - uses: marvinpinto/action-automatic-releases@latest
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
