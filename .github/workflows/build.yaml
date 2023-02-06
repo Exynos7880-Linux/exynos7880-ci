@@ -25,15 +25,11 @@ jobs:
       uses: addnab/docker-run-action@v3
       with: 
         image: coderus/sailfishos-platform-sdk-base:4.5.0.16
-        options: --privileged
+        options: -v ${{ github.workspace }}:/a5y17lte --privileged
         run: |
           set -x
-          cd ~/
-          git clone https://github.com/Exynos7880-Linux/a5y17lte-ci.git
-          cd a5y17lte-ci && pwd
+          cd /a5y17lte && pwd
           ./run-mic.sh
-          sudo mv /root/a5y17lte-ci/sfe-*/*.zip .
-          sudo chown "$USER" *.zip
     - uses: marvinpinto/action-automatic-releases@latest
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -41,6 +37,6 @@ jobs:
         prerelease: false
         title: "${{ env.NOW }}"
         files: |
-          /root/a5y17lte-ci/*.zip
+          /root/a5y17lte-ci/sfe-*/*.zip
           
 
