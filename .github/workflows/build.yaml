@@ -30,6 +30,7 @@ jobs:
           set -x
           cd /a5y17lte && pwd
           ./run-mic.sh
+          sudo mv sfe-*/*.zip .
     - uses: marvinpinto/action-automatic-releases@latest
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -37,6 +38,6 @@ jobs:
         prerelease: false
         title: "${{ env.NOW }}"
         files: |
-          /a5y17lte/sfe-*/*.zip
+          sailfishos*.zip
           
 
