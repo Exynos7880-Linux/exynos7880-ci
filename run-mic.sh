@@ -1,5 +1,5 @@
 #!/bin/sh
-source a5y17lte.env
+source /root/a5y17lte-ci/a5y17lte.env
 
 sudo zypper in -y kmod
 sudo zypper -n in lvm2
