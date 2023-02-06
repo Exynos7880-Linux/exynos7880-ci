@@ -32,6 +32,7 @@ jobs:
           git clone https://github.com/Exynos7880-Linux/a5y17lte-ci.git
           cd a5y17lte-ci && pwd
           ./run-mic.sh
+          sudo mv /root/a5y17lte-ci/sfe-*/*.zip .
     - uses: marvinpinto/action-automatic-releases@latest
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -39,6 +40,6 @@ jobs:
         prerelease: false
         title: "${{ env.NOW }}"
         files: |
-          /root/a5y17lte-ci/sfe-*/*.zip
+          /root/a5y17lte-ci/*.zip
           
 
