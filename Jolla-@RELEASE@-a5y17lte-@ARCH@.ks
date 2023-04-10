@@ -1,7 +1,7 @@
-# DisplayName: Jolla a7y17lte/@ARCH@ (release) 1
+# DisplayName: Jolla a5y17lte/@ARCH@ (release) 1
 # KickstartType: release
-# DeviceModel: a7y17lte
-# DeviceVariant: a7y17lte
+# DeviceModel: a5y17lte
+# DeviceVariant: a5y17lte
 # Brand: Jolla
 # SuggestedImageType: fs
 # SuggestedArchitecture: aarch64
@@ -13,20 +13,20 @@ part / --size 500 --ondisk sda --fstype=ext4
 
 ## No suitable configuration found in /tmp/sandbox/usr/share/ssu/kickstart/bootloader
 
-repo --name=adaptation-common-a7y17lte-@RELEASE@ --baseurl=https://releases.jolla.com/releases/@RELEASE@/jolla-hw/adaptation-common/@ARCH@/
-repo --name=adaptation-community-a7y17lte-@RELEASE@ --baseurl=https://exynos7880-linux.github.io/repo/@RELEASE@/a7y17lte/
-repo --name=adaptation-community-common-a7y17lte-@RELEASE@ --baseurl=https://repo.sailfishos.org/obs/nemo:/devel:/hw:/common/sailfish_latest_@ARCH@/
+repo --name=adaptation-common-a5y17lte-@RELEASE@ --baseurl=https://releases.jolla.com/releases/@RELEASE@/jolla-hw/adaptation-common/@ARCH@/
+repo --name=adaptation-community-a5y17lte-@RELEASE@ --baseurl=https://exynos7880-linux.github.io/repo/@RELEASE@/a5y17lte/
+repo --name=adaptation-community-common-a5y17lte-@RELEASE@ --baseurl=https://repo.sailfishos.org/obs/nemo:/devel:/hw:/common/sailfish_latest_@ARCH@/
 repo --name=apps-@RELEASE@ --baseurl=https://releases.jolla.com/jolla-apps/@RELEASE@/@ARCH@/
 repo --name=customer-jolla-@RELEASE@ --baseurl=https://releases.jolla.com/features/@RELEASE@/customers/jolla/@ARCH@/
 repo --name=hotfixes-@RELEASE@ --baseurl=https://releases.jolla.com/releases/@RELEASE@/hotfixes/@ARCH@/
 repo --name=jolla-@RELEASE@ --baseurl=https://releases.jolla.com/releases/@RELEASE@/jolla/@ARCH@/
 
 %packages
-patterns-sailfish-device-configuration-a7y17lte
+patterns-sailfish-device-configuration-a5y17lte
 %end
 
 %attachment
-### Commands from /tmp/sandbox/usr/share/ssu/kickstart/attachment/a7y17lte
+### Commands from /tmp/sandbox/usr/share/ssu/kickstart/attachment/a5y17lte
 /boot/hybris-boot.img
 /boot/hybris-updater-script
 /boot/hybris-updater-unpack.sh
@@ -155,7 +155,7 @@ export SSU_RELEASE_TYPE=release
 ### begin hybris
 pushd $IMG_OUT_DIR
 
-DEVICE=a7y17lte
+DEVICE=a5y17lte
 
 VERSION_FILE=./os-release
 source $VERSION_FILE
