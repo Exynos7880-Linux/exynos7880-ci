@@ -10,7 +10,7 @@ on:
 jobs:
 
   sfos_build_a5:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout
@@ -40,4 +40,34 @@ jobs:
         files: |
           sailfishos*.zip
           
+  sfos_build_a7:
+    runs-on: ubuntu-latest
 
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      
+    - name: install needed pkgs
+      run: |
+        sudo apt-get update && sudo apt-get install -y qemu-user-static
+        echo "NOW=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
+
+    - name: Run Docker container to Build Sailfish os
+      uses: addnab/docker-run-action@v3
+      with: 
+        image: coderus/sailfishos-platform-sdk-base:4.5.0.16
+        options: -v ${{ github.workspace }}:/a7y17lte --privileged
+        run: |
+          set -x
+          cd /a7y17lte && pwd
+          ./run-mic-a7.sh
+          sudo mv sfe-*/*.zip .
+    - uses: marvinpinto/action-automatic-releases@latest
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "${{ env.NOW }}"
+        prerelease: false
+        title: "${{ env.NOW }}"
+        files: |
+          sailfishos*.zip
+          
