@@ -34,9 +34,9 @@ jobs:
     - uses: marvinpinto/action-automatic-releases@latest
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "${{ env.NOW }}"
+        automatic_release_tag: "${{ env.NOW }}-a5y17lte"
         prerelease: false
-        title: "${{ env.NOW }}"
+        title: "${{ env.NOW }}-a5y17lte"
         files: |
           sailfishos*.zip
           
@@ -65,9 +65,9 @@ jobs:
     - uses: marvinpinto/action-automatic-releases@latest
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "${{ env.NOW }}"
+        automatic_release_tag: "${{ env.NOW }}-a7y17lte"
         prerelease: false
-        title: "${{ env.NOW }}"
+        title: "${{ env.NOW }}-a7y17lte"
         files: |
           sailfishos*.zip
           
