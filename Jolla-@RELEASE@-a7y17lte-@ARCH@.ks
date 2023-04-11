@@ -197,7 +197,26 @@ mkdir -p updater/data
 
 mv update-binary updater/META-INF/com/google/android/update-binary
 mv hybris-updater-script updater/META-INF/com/google/android/updater-script
-mv hybris-updater-unpack.sh updater/updater-unpack.sh
+
+cat <<'EOF' >> updater/updater-unpack.sh
+#! /sbin/sh
+
+IMG_DIR="/data/.stowaways/images"
+
+rm -rf $IMG_DIR
+rm -rf /data/.stowaways
+mkdir -p $IMG_DIR
+mkdir -p /data/.stowaways/sailfishos
+
+mv /data/rootfs.img $IMG_DIR/rootfs.img
+e2fsck -fy $IMG_DIR/rootfs.img
+resize2fs $IMG_DIR/rootfs.img 8G
+
+EXIT=$?
+
+exit $EXIT
+EOF
+
 mv hybris-boot.img updater/hybris-boot.img
 mv data/rootfs.img updater/data/rootfs.img
 
