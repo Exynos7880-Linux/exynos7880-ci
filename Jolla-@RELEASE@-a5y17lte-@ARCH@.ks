@@ -99,6 +99,10 @@ then
     ssu domain sailfish
 fi
 ### end 70_sdk-domain
+### begin 80_community_repo
+# Device updates (and, on a5y17lte, Android App Support) come from the community repo.
+ssu ar adaptation-community-a5y17lte https://exynos7880-linux.github.io/repo/@RELEASE@/a5y17lte/
+### end 80_community_repo
 ### begin 90_accept_unsigned_packages
 sed -i /etc/zypp/zypp.conf \
     -e '/^# pkg_gpgcheck =/ c \
