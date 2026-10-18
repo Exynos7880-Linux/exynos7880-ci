@@ -3,6 +3,11 @@
 # Usage: ./run-mic.sh [a5y17lte|a7y17lte]   (default: a5y17lte)
 # RELEASE can be overridden from the environment, e.g. RELEASE=5.1.0.11
 # WAYDROID=1 adds Android app support (Waydroid) to the image.
+# ADAPTATION_REPO overrides the community adaptation repo, e.g. a local build:
+#   ADAPTATION_REPO=file://$HOME/sfos/repo/5.1.0.11/a5y17lte/ ./run-mic.sh a5y17lte
+# WAYDROID_REPO likewise overrides the Waydroid repo (used with WAYDROID=1).
+# DEVICE_REPO is the repo the installed phone gets updates from (ssu). It defaults to
+# ADAPTATION_REPO, or to the community repo when ADAPTATION_REPO is a local file:// one.
 set -e
 
 WAYDROID="${WAYDROID:-0}"
@@ -17,17 +22,38 @@ echo "Device:  $DEVICE"
 echo "Release: $RELEASE"
 echo "Waydroid: $WAYDROID"
 
+ADAPTATION_REPO="${ADAPTATION_REPO:-https://exynos7880-linux.github.io/repo/$RELEASE/$DEVICE/}"
+echo "Adaptation repo: $ADAPTATION_REPO"
+DEFAULT_DEVICE_REPO="https://exynos7880-linux.github.io/repo/$RELEASE/$DEVICE/"
+case "$ADAPTATION_REPO" in
+file://*) DEVICE_REPO="${DEVICE_REPO:-$DEFAULT_DEVICE_REPO}" ;;
+*)        DEVICE_REPO="${DEVICE_REPO:-$ADAPTATION_REPO}" ;;
+esac
+echo "Device repo on the phone: $DEVICE_REPO"
+WAYDROID_REPO="${WAYDROID_REPO:-https://exynos7880-linux.github.io/repo/$RELEASE/waydroid/}"
+[ "$WAYDROID" = "1" ] && echo "Waydroid repo: $WAYDROID_REPO"
+
 # Fail early if the community adaptation repo has no packages for this release.
-ADAPT_URL="https://exynos7880-linux.github.io/repo/$RELEASE/$DEVICE/repodata/repomd.xml"
+ADAPT_URL="${ADAPTATION_REPO%/}/repodata/repomd.xml"
+case "$ADAPT_URL" in
+file://*)
+    if [ ! -f "${ADAPT_URL#file://}" ]; then
+        echo "ERROR: no repodata at ${ADAPT_URL#file://} (run createrepo_c there first)"
+        exit 1
+    fi
+    ;;
+esac
 if command -v curl >/dev/null 2>&1; then
-    if ! curl -sfI "$ADAPT_URL" >/dev/null; then
+    if [ "${ADAPT_URL#file://}" = "$ADAPT_URL" ] && ! curl -sfI "$ADAPT_URL" >/dev/null; then
         echo "ERROR: no adaptation repo for $RELEASE at $ADAPT_URL"
         echo "Rebuild and publish the $DEVICE adaptation for $RELEASE first (see UPGRADING.md)."
         exit 1
     fi
     if [ "$WAYDROID" = "1" ]; then
-        WD_URL="https://exynos7880-linux.github.io/repo/$RELEASE/waydroid/repodata/repomd.xml"
-        if ! curl -sfI "$WD_URL" >/dev/null; then
+        WD_URL="${WAYDROID_REPO%/}/repodata/repomd.xml"
+        if [ "${WD_URL#file://}" != "$WD_URL" ]; then
+            [ -f "${WD_URL#file://}" ] || { echo "ERROR: no repodata at ${WD_URL#file://}"; exit 1; }
+        elif ! curl -sfI "$WD_URL" >/dev/null; then
             echo "ERROR: WAYDROID=1 but no Waydroid repo for $RELEASE at $WD_URL"
             echo "Rebuild the Waydroid packages for $RELEASE first (see UPGRADING.md)."
             exit 1
@@ -35,7 +61,8 @@ if command -v curl >/dev/null 2>&1; then
     fi
 fi
 
-sudo zypper -n in kmod lvm2
+# 106 = some repos skipped (e.g. an unreadable ssu adaptation repo in the Platform SDK)
+sudo zypper -n in kmod lvm2 || [ $? -eq 106 ]
 
 echo "Creating loop devices..."
 for i in 0 1 2; do
@@ -47,13 +74,22 @@ echo "Building Sailfish $RELEASE for $DEVICE"
 cd "$WORKDIR"
 
 KS="Jolla-@RELEASE@-$DEVICE-@ARCH@.ks"
+if [ "$ADAPTATION_REPO" != "$DEFAULT_DEVICE_REPO" ] || [ "$DEVICE_REPO" != "$DEFAULT_DEVICE_REPO" ]; then
+    # Build from ADAPTATION_REPO and point the phone's ssu repo at DEVICE_REPO.
+    LOCAL_KS="Jolla-@RELEASE@-$DEVICE-local-@ARCH@.ks"
+    sed -e "s#^\(repo --name=adaptation-community-$DEVICE-@RELEASE@ --baseurl=\).*#\1$ADAPTATION_REPO#" \
+        -e "s#^\(ssu ar adaptation-community-$DEVICE \).*#\1$DEVICE_REPO#" "$KS" > "$LOCAL_KS"
+    grep -q "baseurl=$ADAPTATION_REPO" "$LOCAL_KS" || { echo "ERROR: could not set adaptation repo in $LOCAL_KS"; exit 1; }
+    grep -q "^ssu ar adaptation-community-$DEVICE $DEVICE_REPO\$" "$LOCAL_KS" || { echo "ERROR: could not set device repo in $LOCAL_KS"; exit 1; }
+    KS="$LOCAL_KS"
+fi
 if [ "$WAYDROID" = "1" ]; then
     # Make a Waydroid variant of the kickstart: extra repo + extra packages.
     WD_KS="Jolla-@RELEASE@-$DEVICE-waydroid-@ARCH@.ks"
-    awk -v pkgs="$WAYDROID_PKGS" '
+    awk -v pkgs="$WAYDROID_PKGS" -v wdrepo="$WAYDROID_REPO" '
         { print }
         /^repo --name=jolla-@RELEASE@ / {
-            print "repo --name=waydroid-@RELEASE@ --baseurl=https://exynos7880-linux.github.io/repo/@RELEASE@/waydroid/"
+            print "repo --name=waydroid-@RELEASE@ --baseurl=" wdrepo
         }
         /^%packages/ { n = split(pkgs, a, " "); for (i = 1; i <= n; i++) print a[i] }
     ' "$KS" > "$WD_KS"
