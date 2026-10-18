@@ -1,73 +1,65 @@
 name: Build sailfishos Images
 
-on: 
+on:
   push:
     branches:
       - master
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Sailfish OS release to build"
+        default: "5.1.0.11"
+      sdk_image:
+        description: "Platform SDK container image (must match or exceed the release)"
+        default: "coderus/sailfishos-platform-sdk-base:5.1.0.11"
+
+env:
+  # Current stable Sailfish OS release ("Pispala", released to all 2026-06-16).
+  SFOS_RELEASE: ${{ github.event.inputs.release || '5.1.0.11' }}
+  SDK_IMAGE: ${{ github.event.inputs.sdk_image || 'coderus/sailfishos-platform-sdk-base:5.1.0.11' }}
+
+permissions:
+  contents: write
 
 jobs:
-
-  sfos_build_a5:
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [a5y17lte, a7y17lte]
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
-      
-    - name: install needed pkgs
+      uses: actions/checkout@v4
+
+    - name: Install needed packages
       run: |
         sudo apt-get update && sudo apt-get install -y qemu-user-static
-        echo "NOW=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
+        echo "NOW=$(date +'%Y.%m.%d')" >> "$GITHUB_ENV"
 
-    - name: Run Docker container to Build Sailfish os
-      uses: addnab/docker-run-action@v3
-      with: 
-        image: coderus/sailfishos-platform-sdk-base:4.5.0.16
-        options: -v ${{ github.workspace }}:/a5y17lte --privileged
-        run: |
-          set -x
-          cd /a5y17lte && pwd
-          ./run-mic.sh
-          sudo mv sfe-*/*.zip .
-    - uses: marvinpinto/action-automatic-releases@latest
-      with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "${{ env.NOW }}-a5y17lte"
-        prerelease: false
-        title: "${{ env.NOW }}-a5y17lte"
-        files: |
-          sailfishos*.zip
-          
-  sfos_build_a7:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-      
-    - name: install needed pkgs
+    - name: Check adaptation repo exists for this release
       run: |
-        sudo apt-get update && sudo apt-get install -y qemu-user-static
-        echo "NOW=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
+        url="https://exynos7880-linux.github.io/repo/${SFOS_RELEASE}/${{ matrix.device }}/repodata/repomd.xml"
+        if ! curl -sfI "$url" >/dev/null; then
+          echo "::error::No ${{ matrix.device }} adaptation for ${SFOS_RELEASE} at $url. See UPGRADING.md."
+          exit 1
+        fi
 
-    - name: Run Docker container to Build Sailfish os
-      uses: addnab/docker-run-action@v3
-      with: 
-        image: coderus/sailfishos-platform-sdk-base:4.5.0.16
-        options: -v ${{ github.workspace }}:/a7y17lte --privileged
-        run: |
-          set -x
-          cd /a7y17lte && pwd
-          ./run-mic-a7.sh
-          sudo mv sfe-*/*.zip .
-    - uses: marvinpinto/action-automatic-releases@latest
+    - name: Build Sailfish OS image in Platform SDK
+      run: |
+        docker run --rm --privileged \
+          -e RELEASE="${SFOS_RELEASE}" \
+          -v "${{ github.workspace }}:/build" \
+          "${SDK_IMAGE}" \
+          bash -c 'set -x; cd /build && ./run-mic.sh ${{ matrix.device }} && sudo mv sfe-*/*.zip .'
+
+    - name: Publish release
+      uses: softprops/action-gh-release@v2
       with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "${{ env.NOW }}-a7y17lte"
-        prerelease: false
-        title: "${{ env.NOW }}-a7y17lte"
-        files: |
-          sailfishos*.zip
-          
+        tag_name: ${{ env.NOW }}-${{ matrix.device }}-${{ env.SFOS_RELEASE }}
+        name: ${{ env.NOW }}-${{ matrix.device }} (Sailfish OS ${{ env.SFOS_RELEASE }})
+        prerelease: true
+        files: sailfishos*.zip
