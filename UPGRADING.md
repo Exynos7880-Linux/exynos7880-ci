@@ -58,3 +58,68 @@ Jolla requires stop releases in order:
 4.5.0.25 → 4.6.0.15 → 5.0.0.71 → 5.0.0.78 (hotfix) → 5.1.0.11.
 Each step needs an adaptation repo for that version, so a clean reflash of the
 5.1.0.11 image is much simpler. Builds are marked as prerelease until tested.
+
+## Android app support (Waydroid)
+
+Jolla's AppSupport (used on Xperia and Jolla devices) is closed and licensed only
+for official devices, so community ports use **Waydroid** instead: a full Android
+container running on the port's own kernel and hybris stack.
+
+The old repo already has 2022 Waydroid builds in `repo/custom-repo/`
+(waydroid 1.3.3, waydroid-gbinder-config-hybris, waydroid-runner,
+waydroid-sensors, waydroid-settings, python3-gbinder). They were built for 4.5
+(python 3.8) and will not work on 5.1 (python 3.11), so they must be rebuilt.
+
+### 1. Kernel options
+
+Add these to the a5y17lte/a7y17lte defconfig, then rebuild
+`droid-hal-<device>-kernel` (`build_packages.sh -d`) and reflash the boot image:
+
+```
+CONFIG_ANDROID_BINDER_IPC=y
+CONFIG_ANDROID_BINDER_DEVICES="binder,hwbinder,vndbinder,anbox-binder,anbox-hwbinder,anbox-vndbinder"
+CONFIG_ASHMEM=y
+CONFIG_MEMFD_CREATE=y          # may need a backport on an old 3.x kernel
+CONFIG_NAMESPACES=y
+CONFIG_UTS_NS=y
+CONFIG_IPC_NS=y
+CONFIG_PID_NS=y
+CONFIG_NET_NS=y
+CONFIG_CGROUPS=y
+CONFIG_CGROUP_DEVICE=y
+CONFIG_CGROUP_FREEZER=y
+CONFIG_VETH=y
+CONFIG_BRIDGE=y
+CONFIG_NETFILTER_XT_TARGET_MASQUERADE=y
+CONFIG_NF_NAT_MASQUERADE_IPV4=y
+```
+
+The `anbox-*` binder nodes give Waydroid its own binder devices so it does not
+fight with the hybris side over `/dev/binder`. If the kernel is older than 4.14,
+expect to backport binder fixes. This is the riskiest step; check
+`zcat /proc/config.gz | grep -E "BINDER|ASHMEM|_NS="` on the phone after flashing.
+
+### 2. Rebuild the packages for 5.1.0.11
+
+In the 5.1.0.11 aarch64 SDK target, build from their sources (sailfishos-open /
+waydroid-sailfish forks) in this order: `libgbinder` (if not already in the
+target), `python3-gbinder`, `waydroid`, `waydroid-gbinder-config-hybris`,
+`waydroid-runner`, `waydroid-sensors`, `waydroid-settings`. Copy the RPMs to
+`repo/5.1.0.11/waydroid/`, run `createrepo_c` there and push the Pages repo.
+
+### 3. Build the image
+
+Local: `WAYDROID=1 RELEASE=5.1.0.11 ./run-mic.sh a5y17lte`
+CI: Actions → Build sailfishos Images → Run workflow → tick **waydroid**.
+CI then builds both a normal image and a `-waydroid` image per device, so a
+broken Waydroid repo never blocks the normal build.
+
+### 4. First boot
+
+```
+devel-su
+waydroid init            # downloads the LineageOS-based Android image
+systemctl enable --now waydroid-container
+```
+Then start "Waydroid" from the app grid. Expect light apps to run fine; heavy
+games will be slow on Exynos 7880 with 3 GB RAM.
